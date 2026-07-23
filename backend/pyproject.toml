@@ -1,0 +1,167 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "netacheck"
+version = "0.1.0"
+description = "NetaCheck — Every Politician. Every Record. Every Source."
+readme = {file = "../README.md", content-type = "text/markdown"}
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "NetaCheck Contributors" }]
+
+dependencies = [
+    # --- Web framework ---
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "python-multipart>=0.0.9",
+
+    # --- Database ---
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+
+    # --- Validation ---
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "email-validator>=2.1.0",
+
+    # --- HTTP client (scrapers) ---
+    "httpx>=0.27.0",
+    "aiofiles>=23.2.0",
+
+    # --- HTML parsing (scrapers) ---
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
+
+    # --- Task queue ---
+    "dramatiq[redis]>=1.16.0",
+    "apscheduler>=3.10.0",
+
+    # --- PDF generation ---
+    "reportlab>=4.1.0",
+    "qrcode[pil]>=7.4.0",
+    "Pillow>=10.0.0",
+
+    # --- Logging ---
+    "structlog>=24.1.0",
+    "rich>=13.7.0",
+
+    # --- Utilities ---
+    "python-slugify>=8.0.0",
+    "python-dateutil>=2.9.0",
+    "tenacity>=8.3.0",
+    "orjson>=3.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # --- Testing ---
+    "pytest>=8.1.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "anyio[trio]>=4.3.0",
+
+    # --- Type stubs ---
+    "types-beautifulsoup4",
+    "types-python-dateutil",
+    "types-aiofiles",
+
+    # --- Linting / formatting ---
+    "black>=24.3.0",
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+    "pre-commit>=3.7.0",
+]
+
+[project.scripts]
+netacheck = "netacheck.main:main"
+
+# ---------------------------------------------------------------------------
+# Hatch
+# ---------------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = ["src/netacheck"]
+
+# ---------------------------------------------------------------------------
+# Black
+# ---------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = '\.pyi?$'
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "RUF", # Ruff-specific
+]
+ignore = [
+    "E501",  # line too long — Black handles this
+    "B008",  # do not perform function calls in default arguments (FastAPI DI pattern)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["netacheck"]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["dramatiq.*", "reportlab.*", "qrcode.*", "bs4.*", "slugify.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--cov=netacheck",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-fail-under=80",
+    "-v",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["src/netacheck"]
+omit = ["*/tests/*", "*/migrations/*", "alembic/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

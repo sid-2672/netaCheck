@@ -1,0 +1,100 @@
+# =============================================================================
+# NetaCheck — .gitignore
+# =============================================================================
+
+# Environment / secrets
+.env
+.env.local
+.env.production
+.env.staging
+.secrets.baseline
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linters
+.ruff_cache/
+
+# Alembic
+# (migration versions are committed — only the __pycache__ is ignored)
+backend/alembic/versions/__pycache__/
+
+# Database
+*.sqlite3
+*.db
+
+# Logs
+*.log
+logs/
+
+# Node.js / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+docker/postgres/data/
+
+# PDFs (generated artifacts, not source)
+*.pdf
