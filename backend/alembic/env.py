@@ -29,21 +29,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from netacheck.core.config import settings
 from netacheck.core.database import Base  # noqa: F401
 
-# Phase 2: Uncomment as model files are created
-# from netacheck.models import (  # noqa: F401
-#     politician,
-#     geography,
-#     legislature,
-#     source,
-#     criminal,
-#     assets,
-#     attendance,
-#     legislative,
-#     election,
-#     affidavit,
-#     correction,
-#     audit,
-# )
+# Phase 2: All models imported so autogenerate discovers all tables
+import netacheck.models  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Alembic Config object — access to values within the .ini file

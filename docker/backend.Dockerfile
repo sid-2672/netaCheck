@@ -14,6 +14,7 @@ RUN groupadd --gid 1001 appgroup && \
 WORKDIR /app
 
 # ---- Install dependencies (layer-cached separately from source) ----
+RUN touch /README.md
 COPY backend/pyproject.toml ./pyproject.toml
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir ".[dev]" 2>/dev/null || \
@@ -36,4 +37,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "netacheck.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-config", "/dev/null"]
+CMD ["uvicorn", "netacheck.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]

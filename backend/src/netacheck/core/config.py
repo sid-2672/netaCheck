@@ -14,7 +14,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -75,7 +75,15 @@ class Settings(BaseSettings):
     storage_access_key_id: str | None = None
     storage_secret_access_key: str | None = None
     storage_bucket_name: str = "netacheck-pdfs"
-    storage_public_url: AnyHttpUrl | None = None
+    storage_public_url: str | None = None
+
+    @field_validator("storage_public_url", "storage_endpoint_url", "storage_access_key_id", "storage_secret_access_key", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        """Coerce empty strings to None for optional fields."""
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
     # -------------------------------------------------------------------------
     # Admin authentication (API key strategy for MVP)

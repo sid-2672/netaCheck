@@ -1,0 +1,51 @@
+"""Legislative term model."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import date
+
+from sqlalchemy import Date, Enum, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from netacheck.core.database import Base
+from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+from netacheck.models.politician import House
+
+
+class LegislativeTerm(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "legislative_term"
+
+    politician_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("politician.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    constituency_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("constituency.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    house: Mapped[House] = mapped_column(
+        Enum(House, name="house_enum"), nullable=False
+    )
+    from_date: Mapped[date] = mapped_column(Date, nullable=False)
+    to_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    lok_sabha_number: Mapped[int | None] = mapped_column(nullable=True)
+    state_represented: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    politician: Mapped["Politician"] = relationship(  # type: ignore[name-defined]
+        "Politician", back_populates="legislative_terms"
+    )
+    constituency: Mapped["Constituency"] = relationship("Constituency")  # type: ignore[name-defined]
+    attendance_records: Mapped[list["AttendanceRecord"]] = relationship(  # type: ignore[name-defined]
+        "AttendanceRecord", back_populates="legislative_term"
+    )
+    legislative_activities: Mapped[list["LegislativeActivity"]] = relationship(  # type: ignore[name-defined]
+        "LegislativeActivity", back_populates="legislative_term"
+    )
+
+    def __repr__(self) -> str:
+        return f"<LegislativeTerm politician={self.politician_id} house={self.house}>"
