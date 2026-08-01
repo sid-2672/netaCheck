@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.models.affidavit import Affidavit, AffidavitEntry
 from netacheck.models.assets import AssetCategory, AssetDeclaration, AssetOwnership
@@ -36,7 +36,7 @@ from netacheck.models.grading import (
     GradeMetricResult,
     GradeSnapshot,
 )
-from netacheck.models.legislative import LegislativeActivity, ActivityType
+from netacheck.models.legislative import ActivityType, LegislativeActivity
 from netacheck.models.legislature import LegislativeTerm
 from netacheck.models.politician import (
     Gender,
@@ -48,6 +48,9 @@ from netacheck.models.politician import (
 )
 from netacheck.models.source import SourceProvider, SourceSnapshot
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 pytestmark = pytest.mark.integration
 
 
@@ -57,14 +60,23 @@ pytestmark = pytest.mark.integration
 
 
 async def _make_state(session: AsyncSession, name: str = "Test State") -> State:
-    state = State(name=name, slug=f"test-state-{uuid.uuid4().hex[:6]}", iso_code=f"TS{uuid.uuid4().hex[:4].upper()}", is_union_territory=False)
+    state = State(
+        name=name,
+        slug=f"test-state-{uuid.uuid4().hex[:6]}",
+        iso_code=f"TS{uuid.uuid4().hex[:4].upper()}",
+        is_union_territory=False,
+    )
     session.add(state)
     await session.flush()
     return state
 
 
 async def _make_party(session: AsyncSession, abbr: str = "TST") -> PoliticalParty:
-    party = PoliticalParty(name=f"Test Party {abbr}", slug=f"tp-{abbr.lower()}-{uuid.uuid4().hex[:6]}", abbreviation=abbr)
+    party = PoliticalParty(
+        name=f"Test Party {abbr}",
+        slug=f"tp-{abbr.lower()}-{uuid.uuid4().hex[:6]}",
+        abbreviation=abbr,
+    )
     session.add(party)
     await session.flush()
     return party
@@ -78,13 +90,19 @@ async def _make_politician(session: AsyncSession) -> Politician:
 
 
 async def _make_provider(session: AsyncSession) -> SourceProvider:
-    sp = SourceProvider(name="Test Provider", short_code=f"TP{uuid.uuid4().hex[:4].upper()}", base_url="https://test.example.com")
+    sp = SourceProvider(
+        name="Test Provider",
+        short_code=f"TP{uuid.uuid4().hex[:4].upper()}",
+        base_url="https://test.example.com",
+    )
     session.add(sp)
     await session.flush()
     return sp
 
 
-async def _make_snapshot(session: AsyncSession, provider: SourceProvider, content: bytes = b"test") -> SourceSnapshot:
+async def _make_snapshot(
+    session: AsyncSession, provider: SourceProvider, content: bytes = b"test"
+) -> SourceSnapshot:
     c = hashlib.sha256(content).hexdigest()
     u = hashlib.sha256(f"https://test.example.com/{uuid.uuid4()}".encode()).hexdigest()
     snap = SourceSnapshot(
@@ -92,7 +110,7 @@ async def _make_snapshot(session: AsyncSession, provider: SourceProvider, conten
         url=f"https://test.example.com/{uuid.uuid4()}",
         url_hash=u,
         content_hash=c,
-        fetched_at=datetime.now(tz=timezone.utc),
+        fetched_at=datetime.now(tz=UTC),
         parser_version="1.0.0",
     )
     session.add(snap)
@@ -124,28 +142,38 @@ async def _make_election(session: AsyncSession, constituency: Constituency) -> E
     return e
 
 
-async def _make_election_result(session: AsyncSession, election: Election, politician: Politician) -> ElectionResult:
+async def _make_election_result(
+    session: AsyncSession, election: Election, politician: Politician
+) -> ElectionResult:
     er = ElectionResult(election_id=election.id, politician_id=politician.id, won=True)
     session.add(er)
     await session.flush()
     return er
 
 
-async def _make_affidavit(session: AsyncSession, election_result: ElectionResult, snapshot: SourceSnapshot) -> Affidavit:
+async def _make_affidavit(
+    session: AsyncSession, election_result: ElectionResult, snapshot: SourceSnapshot
+) -> Affidavit:
     a = Affidavit(election_result_id=election_result.id, source_snapshot_id=snapshot.id)
     session.add(a)
     await session.flush()
     return a
 
 
-async def _make_affidavit_entry(session: AsyncSession, affidavit: Affidavit, snapshot: SourceSnapshot) -> AffidavitEntry:
-    e = AffidavitEntry(affidavit_id=affidavit.id, source_snapshot_id=snapshot.id, field_name="test_field")
+async def _make_affidavit_entry(
+    session: AsyncSession, affidavit: Affidavit, snapshot: SourceSnapshot
+) -> AffidavitEntry:
+    e = AffidavitEntry(
+        affidavit_id=affidavit.id, source_snapshot_id=snapshot.id, field_name="test_field"
+    )
     session.add(e)
     await session.flush()
     return e
 
 
-async def _make_leg_term(session: AsyncSession, politician: Politician, constituency: Constituency) -> LegislativeTerm:
+async def _make_leg_term(
+    session: AsyncSession, politician: Politician, constituency: Constituency
+) -> LegislativeTerm:
     term = LegislativeTerm(
         politician_id=politician.id,
         constituency_id=constituency.id,
@@ -233,7 +261,7 @@ class TestPoliticianModel:
         p = await _make_politician(db_session)
         assert p.deleted_at is None
         assert p.is_deleted is False
-        p.deleted_at = datetime.now(tz=timezone.utc)
+        p.deleted_at = datetime.now(tz=UTC)
         await db_session.flush()
         assert p.is_deleted is True
 
@@ -305,7 +333,9 @@ class TestPartyMembershipModel:
 
     async def test_invalid_politician_fk_raises(self, db_session: AsyncSession) -> None:
         party = await _make_party(db_session)
-        m = PartyMembership(politician_id=uuid.uuid4(), party_id=party.id, from_date=date(2020, 1, 1))
+        m = PartyMembership(
+            politician_id=uuid.uuid4(), party_id=party.id, from_date=date(2020, 1, 1)
+        )
         db_session.add(m)
         with pytest.raises(IntegrityError):
             await db_session.flush()
@@ -354,12 +384,20 @@ class TestSourceSnapshotModel:
         content_hash_val = hashlib.sha256(content).hexdigest()
 
         snap1 = SourceSnapshot(
-            provider_id=provider.id, url=url, url_hash=url_hash, content_hash=content_hash_val,
-            fetched_at=datetime.now(tz=timezone.utc), parser_version="1.0.0",
+            provider_id=provider.id,
+            url=url,
+            url_hash=url_hash,
+            content_hash=content_hash_val,
+            fetched_at=datetime.now(tz=UTC),
+            parser_version="1.0.0",
         )
         snap2 = SourceSnapshot(
-            provider_id=provider.id, url=url, url_hash=url_hash, content_hash=content_hash_val,
-            fetched_at=datetime.now(tz=timezone.utc), parser_version="1.0.0",
+            provider_id=provider.id,
+            url=url,
+            url_hash=url_hash,
+            content_hash=content_hash_val,
+            fetched_at=datetime.now(tz=UTC),
+            parser_version="1.0.0",
         )
         db_session.add(snap1)
         await db_session.flush()
@@ -374,14 +412,20 @@ class TestSourceSnapshotModel:
         url_hash = hashlib.sha256(url.encode()).hexdigest()
 
         snap1 = SourceSnapshot(
-            provider_id=provider.id, url=url, url_hash=url_hash,
+            provider_id=provider.id,
+            url=url,
+            url_hash=url_hash,
             content_hash=hashlib.sha256(b"v1 content").hexdigest(),
-            fetched_at=datetime.now(tz=timezone.utc), parser_version="1.0.0",
+            fetched_at=datetime.now(tz=UTC),
+            parser_version="1.0.0",
         )
         snap2 = SourceSnapshot(
-            provider_id=provider.id, url=url, url_hash=url_hash,
+            provider_id=provider.id,
+            url=url,
+            url_hash=url_hash,
             content_hash=hashlib.sha256(b"v2 content").hexdigest(),
-            fetched_at=datetime.now(tz=timezone.utc), parser_version="1.0.0",
+            fetched_at=datetime.now(tz=UTC),
+            parser_version="1.0.0",
         )
         db_session.add(snap1)
         db_session.add(snap2)
@@ -411,7 +455,7 @@ class TestAffidavitSourceConstraint:
         # Attempt to create AffidavitEntry without source_snapshot_id
         bad_entry = AffidavitEntry(
             affidavit_id=affidavit.id,
-            source_snapshot_id=None,  # type: ignore[arg-type]  — should be rejected
+            source_snapshot_id=cast("Any", None),
             field_name="criminal_cases",
         )
         db_session.add(bad_entry)
@@ -461,7 +505,9 @@ class TestCriminalCaseModel:
         assert case.status == CaseStatus.PENDING
         assert case.severity == Severity.HEINOUS
 
-    async def test_criminal_case_fk_to_affidavit_entry_required(self, db_session: AsyncSession) -> None:
+    async def test_criminal_case_fk_to_affidavit_entry_required(
+        self, db_session: AsyncSession
+    ) -> None:
         case = CriminalCase(
             affidavit_entry_id=uuid.uuid4(),
             status=CaseStatus.PENDING,
@@ -490,6 +536,7 @@ class TestAssetDeclarationModel:
         entry = await _make_affidavit_entry(db_session, affidavit, snap)
 
         from decimal import Decimal
+
         asset = AssetDeclaration(
             affidavit_entry_id=entry.id,
             category=AssetCategory.IMMOVABLE,
@@ -504,7 +551,6 @@ class TestAssetDeclarationModel:
         assert asset.value_inr == Decimal("5000000.00")
 
     async def test_asset_fk_to_affidavit_entry_required(self, db_session: AsyncSession) -> None:
-        from decimal import Decimal
         asset = AssetDeclaration(
             affidavit_entry_id=uuid.uuid4(),
             category=AssetCategory.MOVABLE,
@@ -570,8 +616,8 @@ class TestGradeSnapshotModel:
             politician_id=politician.id,
             overall_grade=GradeLetter.B,
             engine_version="1.0.0",
-            computed_at=datetime.now(tz=timezone.utc),
-            data_as_of=datetime.now(tz=timezone.utc),
+            computed_at=datetime.now(tz=UTC),
+            data_as_of=datetime.now(tz=UTC),
         )
         db_session.add(gs)
         await db_session.flush()
@@ -584,13 +630,14 @@ class TestGradeSnapshotModel:
             politician_id=politician.id,
             overall_grade=GradeLetter.A,
             engine_version="1.0.0",
-            computed_at=datetime.now(tz=timezone.utc),
-            data_as_of=datetime.now(tz=timezone.utc),
+            computed_at=datetime.now(tz=UTC),
+            data_as_of=datetime.now(tz=UTC),
         )
         db_session.add(gs)
         await db_session.flush()
 
         from decimal import Decimal
+
         mr = GradeMetricResult(
             grade_snapshot_id=gs.id,
             metric_name="attendance",

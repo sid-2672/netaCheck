@@ -11,9 +11,11 @@ Runs the seed() function against the test database and verifies:
 
 from __future__ import annotations
 
+from datetime import UTC
+from typing import TYPE_CHECKING
+
 import pytest
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.models.affidavit import AffidavitEntry
 from netacheck.models.attendance import AttendanceRecord
@@ -21,6 +23,9 @@ from netacheck.models.election import ElectionResult
 from netacheck.models.geography import Constituency, State
 from netacheck.models.politician import PartyMembership, PoliticalParty, Politician
 from netacheck.models.source import SourceProvider, SourceSnapshot
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 pytestmark = pytest.mark.integration
 
@@ -31,22 +36,28 @@ class TestSeedData:
     @pytest.fixture(autouse=True)
     async def run_seed(self, db_session: AsyncSession) -> None:
         """Run seed data for each test in this class."""
+        import hashlib
+        from datetime import date, datetime
+
+        from netacheck.models.affidavit import Affidavit, AffidavitEntry
+        from netacheck.models.attendance import AttendanceRecord
+        from netacheck.models.election import Election, ElectionResult, ElectionType
+        from netacheck.models.geography import Constituency, ConstituencyType
+        from netacheck.models.legislature import LegislativeTerm
+        from netacheck.models.politician import (
+            Gender,
+            House,
+            PartyMembership,
+            PoliticalParty,
+            Politician,
+        )
+        from netacheck.models.source import SourceProvider, SourceSnapshot
         from tests.fixtures.seed import (
             PARTIES,
             POLITICIANS,
             SOURCE_PROVIDERS,
             STATES,
         )
-        from netacheck.models.geography import Constituency, ConstituencyType
-        from netacheck.models.politician import Politician, PoliticalParty, Gender, PartyMembership, House
-        from netacheck.models.source import SourceProvider, SourceSnapshot
-        from netacheck.models.legislature import LegislativeTerm
-        from netacheck.models.election import Election, ElectionResult, ElectionType
-        from netacheck.models.affidavit import Affidavit, AffidavitEntry
-        from netacheck.models.attendance import AttendanceRecord
-
-        import hashlib
-        from datetime import date, datetime, timezone
 
         # ---- States ----
         state_objects: dict[str, State] = {}
@@ -54,7 +65,7 @@ class TestSeedData:
             state = State(**s)
             db_session.add(state)
             await db_session.flush()
-            state_objects[s["slug"]] = state
+            state_objects[str(s["slug"])] = state
 
         # ---- Constituencies ----
         constituency_objects: list[Constituency] = []
@@ -76,7 +87,7 @@ class TestSeedData:
             party = PoliticalParty(**p)
             db_session.add(party)
             await db_session.flush()
-            party_objects[p["slug"]] = party
+            party_objects[str(p["slug"])] = party
 
         # ---- Source Providers ----
         provider_objects: dict[str, SourceProvider] = {}
@@ -84,7 +95,7 @@ class TestSeedData:
             provider = SourceProvider(**sp)
             db_session.add(provider)
             await db_session.flush()
-            provider_objects[sp["short_code"]] = provider
+            provider_objects[str(sp["short_code"])] = provider
 
         # ---- Snapshot ----
         dummy_content = b"<html><body>Test affidavit data</body></html>"
@@ -94,7 +105,7 @@ class TestSeedData:
             url=dummy_url,
             url_hash=hashlib.sha256(dummy_url.encode()).hexdigest(),
             content_hash=hashlib.sha256(dummy_content).hexdigest(),
-            fetched_at=datetime.now(tz=timezone.utc),
+            fetched_at=datetime.now(tz=UTC),
             http_status=200,
             parser_version="0.1.0",
             raw_content_size_bytes=len(dummy_content),
@@ -107,10 +118,10 @@ class TestSeedData:
         party_list = list(party_objects.values())
         for i, p_data in enumerate(POLITICIANS):
             politician = Politician(
-                name=p_data["name"],
-                slug=p_data["slug"],
+                name=str(p_data["name"]),
+                slug=str(p_data["slug"]),
                 date_of_birth=p_data["date_of_birth"],
-                gender=Gender(p_data["gender"]),
+                gender=Gender(str(p_data["gender"])),
             )
             db_session.add(politician)
             await db_session.flush()
@@ -265,16 +276,21 @@ class TestSeedData:
             text("SELECT COUNT(*) FROM affidavit_entry WHERE source_snapshot_id IS NULL")
         )
         null_count = result.scalar_one()
-        assert null_count == 0, f"CONSTRAINT VIOLATION: {null_count} AffidavitEntry rows lack source_snapshot_id"
+        assert (
+            null_count == 0
+        ), f"CONSTRAINT VIOLATION: {null_count} AffidavitEntry rows lack source_snapshot_id"
 
     async def test_five_attendance_records_created(self, db_session: AsyncSession) -> None:
         result = await db_session.execute(select(AttendanceRecord))
         records = result.scalars().all()
         assert len(records) == 5
 
-    async def test_attendance_records_have_valid_percentages(self, db_session: AsyncSession) -> None:
+    async def test_attendance_records_have_valid_percentages(
+        self, db_session: AsyncSession
+    ) -> None:
         result = await db_session.execute(select(AttendanceRecord))
         records = result.scalars().all()
         for rec in records:
+            assert rec.attendance_pct is not None
             assert 0 <= rec.attendance_pct <= 100
             assert rec.days_present <= rec.days_total

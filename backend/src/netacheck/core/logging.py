@@ -17,11 +17,14 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import TYPE_CHECKING, cast
 
 import structlog
-from structlog.types import EventDict, Processor
 
 from netacheck.core.config import settings
+
+if TYPE_CHECKING:
+    from structlog.types import EventDict, Processor
 
 
 def _add_app_context(logger: object, method: str, event_dict: EventDict) -> EventDict:
@@ -94,11 +97,11 @@ def configure_logging() -> None:
     )
 
 
-def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str) -> structlog.BoundLogger:
     """
     Return a bound structlog logger for the given module name.
 
     Intended to be called at module level:
         log = get_logger(__name__)
     """
-    return structlog.get_logger(name)  # type: ignore[return-value]
+    return cast("structlog.BoundLogger", structlog.get_logger(name))

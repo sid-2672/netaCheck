@@ -6,6 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -14,8 +15,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.politician import Politician
 
-class GradeLetter(str, enum.Enum):
+
+class GradeLetter(enum.StrEnum):
     A = "A"
     B = "B"
     C = "C"
@@ -24,7 +28,7 @@ class GradeLetter(str, enum.Enum):
     NA = "N/A"
 
 
-class Confidence(str, enum.Enum):
+class Confidence(enum.StrEnum):
     OFFICIAL_PRIMARY = "OFFICIAL_PRIMARY"
     OFFICIAL_SECONDARY = "OFFICIAL_SECONDARY"
     INFERRED_DERIVED = "INFERRED_DERIVED"
@@ -49,10 +53,8 @@ class GradeSnapshot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     data_as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    politician: Mapped["Politician"] = relationship(  # type: ignore[name-defined]
-        "Politician", back_populates="grade_snapshots"
-    )
-    metric_results: Mapped[list["GradeMetricResult"]] = relationship(
+    politician: Mapped[Politician] = relationship("Politician", back_populates="grade_snapshots")
+    metric_results: Mapped[list[GradeMetricResult]] = relationship(
         "GradeMetricResult", back_populates="grade_snapshot"
     )
 
@@ -81,7 +83,7 @@ class GradeMetricResult(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(Confidence, name="confidence_enum"), nullable=False
     )
 
-    grade_snapshot: Mapped["GradeSnapshot"] = relationship(
+    grade_snapshot: Mapped[GradeSnapshot] = relationship(
         "GradeSnapshot", back_populates="metric_results"
     )
 

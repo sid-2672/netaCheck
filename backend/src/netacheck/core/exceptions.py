@@ -97,8 +97,7 @@ class DataConflictError(NetaCheckError):
 
     def __init__(self, field: str, source_a: str, source_b: str, **ctx: Any) -> None:
         super().__init__(
-            f"Conflicting values for '{field}' between sources "
-            f"'{source_a}' and '{source_b}'.",
+            f"Conflicting values for '{field}' between sources " f"'{source_a}' and '{source_b}'.",
             field=field,
             source_a=source_a,
             source_b=source_b,

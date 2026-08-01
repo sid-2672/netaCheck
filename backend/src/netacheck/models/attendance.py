@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -11,6 +12,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from netacheck.models.legislature import LegislativeTerm
+    from netacheck.models.source import SourceSnapshot
 
 
 class AttendanceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -35,10 +40,10 @@ class AttendanceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     days_total: Mapped[int] = mapped_column(Integer, nullable=False)
     attendance_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
 
-    legislative_term: Mapped["LegislativeTerm"] = relationship(  # type: ignore[name-defined]
+    legislative_term: Mapped[LegislativeTerm] = relationship(
         "LegislativeTerm", back_populates="attendance_records"
     )
-    source_snapshot: Mapped["SourceSnapshot"] = relationship("SourceSnapshot")  # type: ignore[name-defined]
+    source_snapshot: Mapped[SourceSnapshot] = relationship("SourceSnapshot")
 
     def __repr__(self) -> str:
         return f"<AttendanceRecord {self.session_name} {self.days_present}/{self.days_total}>"

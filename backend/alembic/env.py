@@ -14,11 +14,14 @@ from __future__ import annotations
 
 import asyncio
 from logging.config import fileConfig
+from typing import TYPE_CHECKING
 
-from alembic import context
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
+# Phase 2: All models imported so autogenerate discovers all tables
+import netacheck.models  # noqa: F401
+from alembic import context
 
 # ---------------------------------------------------------------------------
 # Import application settings + all models
@@ -27,10 +30,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 # classes have been imported (which registers them with the mapper).
 # ---------------------------------------------------------------------------
 from netacheck.core.config import settings
-from netacheck.core.database import Base  # noqa: F401
+from netacheck.core.database import Base
 
-# Phase 2: All models imported so autogenerate discovers all tables
-import netacheck.models  # noqa: F401
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection
 
 # ---------------------------------------------------------------------------
 # Alembic Config object — access to values within the .ini file

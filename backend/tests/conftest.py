@@ -8,26 +8,38 @@ test, so tests never pollute each other.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-
-import pytest
-import pytest_asyncio
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
-
-from netacheck.core.database import Base, get_db_session
-from netacheck.main import create_app
-
 # ---------------------------------------------------------------------------
 # Test database — uses NullPool to prevent connection sharing across tests
 # Postgres is mapped to host port 5433 (see docker-compose.yml POSTGRES_PORT=5433)
 # Credentials match .env (POSTGRES_USER / POSTGRES_PASSWORD)
 # ---------------------------------------------------------------------------
+import os
+from typing import TYPE_CHECKING
 
-TEST_DATABASE_URL = (
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool
+
+from netacheck.core.database import Base, get_db_session
+from netacheck.main import create_app
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from fastapi import FastAPI
+
+DEFAULT_TEST_DATABASE_URL = (
     "postgresql+asyncpg://netacheck:netacheck_dev_password@localhost:5433/netacheck_test"
+)
+TEST_DATABASE_URL = (
+    os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL") or DEFAULT_TEST_DATABASE_URL
 )
 
 
@@ -38,7 +50,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def test_engine():
+def test_engine() -> AsyncEngine:
     """Session-scoped engine for the test database."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
@@ -49,7 +61,7 @@ def test_engine():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def create_tables(test_engine):
+async def create_tables(test_engine: AsyncEngine) -> AsyncGenerator[None, None]:
     """Create all tables once per test session, drop on teardown."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -60,7 +72,9 @@ async def create_tables(test_engine):
 
 
 @pytest_asyncio.fixture
-async def db_session(test_engine, create_tables) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(
+    test_engine: AsyncEngine, create_tables: None
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Per-test database session wrapped in a transaction that is always rolled back.
 

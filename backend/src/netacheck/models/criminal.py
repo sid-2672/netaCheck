@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -12,8 +13,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.affidavit import AffidavitEntry
 
-class CaseStatus(str, enum.Enum):
+
+class CaseStatus(enum.StrEnum):
     PENDING = "PENDING"
     CHARGE_FRAMED = "CHARGE_FRAMED"
     CONVICTED = "CONVICTED"
@@ -23,7 +27,7 @@ class CaseStatus(str, enum.Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class Severity(str, enum.Enum):
+class Severity(enum.StrEnum):
     HEINOUS = "HEINOUS"
     SERIOUS = "SERIOUS"
     MINOR = "MINOR"
@@ -58,7 +62,7 @@ class CriminalCase(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     year_filed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_cognizable: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
-    affidavit_entry: Mapped["AffidavitEntry"] = relationship(  # type: ignore[name-defined]
+    affidavit_entry: Mapped[AffidavitEntry] = relationship(
         "AffidavitEntry", back_populates="criminal_cases"
     )
 

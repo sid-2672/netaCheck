@@ -112,7 +112,6 @@ select = [
     "C4",  # flake8-comprehensions
     "DTZ", # flake8-datetimez
     "SIM", # flake8-simplify
-    "TCH", # flake8-type-checking
     "RUF", # Ruff-specific
 ]
 ignore = [

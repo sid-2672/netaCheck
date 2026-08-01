@@ -13,8 +13,8 @@ Design decisions:
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import FastAPI, Request, status
@@ -33,6 +33,9 @@ from netacheck.core.exceptions import (
     SourceMissingError,
 )
 from netacheck.core.logging import configure_logging
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 log = structlog.get_logger(__name__)
 
@@ -98,9 +101,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(SourceMissingError)
-    async def source_missing_handler(
-        request: Request, exc: SourceMissingError
-    ) -> ORJSONResponse:
+    async def source_missing_handler(request: Request, exc: SourceMissingError) -> ORJSONResponse:
         log.error("source_missing_attempted_render", **exc.context)
         return ORJSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -112,18 +113,14 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(AuthorizationError)
-    async def authorization_handler(
-        request: Request, exc: AuthorizationError
-    ) -> ORJSONResponse:
+    async def authorization_handler(request: Request, exc: AuthorizationError) -> ORJSONResponse:
         return ORJSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"type": "unauthorized", "detail": exc.detail},
         )
 
     @app.exception_handler(NetaCheckError)
-    async def domain_error_handler(
-        request: Request, exc: NetaCheckError
-    ) -> ORJSONResponse:
+    async def domain_error_handler(request: Request, exc: NetaCheckError) -> ORJSONResponse:
         log.warning("domain_error", detail=exc.detail, **exc.context)
         return ORJSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

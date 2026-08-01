@@ -7,7 +7,7 @@ criminal cases, assets, attendance, legislative activity, and grade.
 
 from __future__ import annotations
 
-import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
@@ -19,7 +19,11 @@ from netacheck.models.election import ElectionResult
 from netacheck.models.grading import GradeSnapshot
 from netacheck.models.legislative import LegislativeActivity
 from netacheck.models.legislature import LegislativeTerm
-from netacheck.repositories.base import AsyncRepository
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ReportCardRepository:
@@ -29,8 +33,8 @@ class ReportCardRepository:
     Does not inherit from AsyncRepository since it spans multiple models.
     """
 
-    def __init__(self, session: object) -> None:
-        self.session = session  # type: ignore[assignment]
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
 
     async def get_latest_grade(self, politician_id: uuid.UUID) -> GradeSnapshot | None:
         """Return the most recently computed grade snapshot for a politician."""

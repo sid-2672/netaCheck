@@ -8,16 +8,16 @@ The hard constraint: every AffidavitEntry MUST reference a SourceSnapshot.
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING
 
 import structlog
+from slugify import slugify
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from netacheck.ingestion.adr.normalizer import NormalisedAsset, NormalisedCandidate
 from netacheck.ingestion.base import DuplicateSnapshotError, content_hash
 from netacheck.models.affidavit import Affidavit, AffidavitEntry
-from netacheck.models.assets import AssetDeclaration, AssetCategory
+from netacheck.models.assets import AssetDeclaration
 from netacheck.models.criminal import CriminalCase
 from netacheck.models.election import Election, ElectionResult, ElectionType
 from netacheck.models.geography import Constituency, ConstituencyType, State
@@ -28,6 +28,11 @@ from netacheck.models.politician import (
     PoliticianAlias,
 )
 from netacheck.models.source import SourceProvider, SourceSnapshot
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from netacheck.ingestion.adr.normalizer import NormalisedCandidate
 
 logger = structlog.get_logger(__name__)
 
@@ -46,9 +51,7 @@ class AdrWriter:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def write(
-        self, candidate: NormalisedCandidate, raw_html: bytes
-    ) -> Politician:
+    async def write(self, candidate: NormalisedCandidate, raw_html: bytes) -> Politician:
         """
         Full pipeline for one candidate:
           1. Ensure SourceProvider exists
@@ -120,9 +123,7 @@ class AdrWriter:
         )
 
         # 9. Affidavit entry (one per candidate per election)
-        entry = await self._get_or_create_affidavit_entry(
-            affidavit=affidavit, snapshot=snapshot
-        )
+        entry = await self._get_or_create_affidavit_entry(affidavit=affidavit, snapshot=snapshot)
 
         # 10. Criminal cases
         if candidate.criminal_cases:
@@ -205,7 +206,7 @@ class AdrWriter:
             url=url,
             url_hash=url_hash,
             content_hash=chash,
-            fetched_at=datetime.now(tz=timezone.utc),
+            fetched_at=datetime.now(tz=UTC),
             parser_version="1.0.0",
             raw_content_size_bytes=len(raw_html),
         )
@@ -214,13 +215,10 @@ class AdrWriter:
         return snapshot
 
     async def _get_or_create_state(self, name: str) -> State:
-        result = await self._session.execute(
-            select(State).where(State.name == name)
-        )
+        result = await self._session.execute(select(State).where(State.name == name))
         existing = result.scalar_one_or_none()
         if existing:
             return existing
-        from slugify import slugify  # type: ignore[import-untyped]
         state = State(
             name=name,
             slug=slugify(name),
@@ -231,9 +229,7 @@ class AdrWriter:
         await self._session.flush()
         return state
 
-    async def _get_or_create_constituency(
-        self, state: State, name: str
-    ) -> Constituency:
+    async def _get_or_create_constituency(self, state: State, name: str) -> Constituency:
         result = await self._session.execute(
             select(Constituency).where(
                 Constituency.name == name,
@@ -243,7 +239,6 @@ class AdrWriter:
         existing = result.scalar_one_or_none()
         if existing:
             return existing
-        from slugify import slugify  # type: ignore[import-untyped]
         constituency = Constituency(
             state_id=state.id,
             name=name,
@@ -277,16 +272,13 @@ class AdrWriter:
         await self._session.flush()
         return election
 
-    async def _get_or_create_party(
-        self, name: str, abbreviation: str
-    ) -> PoliticalParty:
+    async def _get_or_create_party(self, name: str, abbreviation: str) -> PoliticalParty:
         result = await self._session.execute(
             select(PoliticalParty).where(PoliticalParty.abbreviation == abbreviation)
         )
         existing = result.scalar_one_or_none()
         if existing:
             return existing
-        from slugify import slugify  # type: ignore[import-untyped]
         party = PoliticalParty(
             name=name,
             abbreviation=abbreviation,
@@ -297,9 +289,7 @@ class AdrWriter:
         await self._session.flush()
         return party
 
-    async def _get_or_create_politician(
-        self, candidate: NormalisedCandidate
-    ) -> Politician:
+    async def _get_or_create_politician(self, candidate: NormalisedCandidate) -> Politician:
         # Look up by slug (most stable identifier)
         result = await self._session.execute(
             select(Politician).where(Politician.slug == candidate.slug)
@@ -379,9 +369,7 @@ class AdrWriter:
         snapshot: SourceSnapshot,
     ) -> Affidavit:
         result = await self._session.execute(
-            select(Affidavit).where(
-                Affidavit.election_result_id == election_result.id
-            )
+            select(Affidavit).where(Affidavit.election_result_id == election_result.id)
         )
         existing = result.scalar_one_or_none()
         if existing:
@@ -400,9 +388,7 @@ class AdrWriter:
         snapshot: SourceSnapshot,
     ) -> AffidavitEntry:
         result = await self._session.execute(
-            select(AffidavitEntry).where(
-                AffidavitEntry.affidavit_id == affidavit.id
-            )
+            select(AffidavitEntry).where(AffidavitEntry.affidavit_id == affidavit.id)
         )
         existing = result.scalar_one_or_none()
         if existing:

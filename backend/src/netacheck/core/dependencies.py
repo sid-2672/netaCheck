@@ -23,8 +23,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.core.config import Settings, get_settings
 from netacheck.core.database import get_db_session
-from netacheck.core.exceptions import InvalidApiKeyError
-
 
 # ---------------------------------------------------------------------------
 # Typed aliases — import these in route files for clean signatures

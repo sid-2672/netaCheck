@@ -11,10 +11,10 @@ from __future__ import annotations
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.ingestion.adr.normalizer import (
     NormalisedAsset,
@@ -28,6 +28,9 @@ from netacheck.models.assets import AssetCategory, AssetDeclaration, AssetOwners
 from netacheck.models.criminal import CaseStatus, CriminalCase, Severity
 from netacheck.models.election import ElectionResult
 from netacheck.models.politician import Politician
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 pytestmark = pytest.mark.integration
 
@@ -53,7 +56,8 @@ def _make_candidate(
     cid = candidate_id or int(uuid.uuid4().int >> 96)
     return NormalisedCandidate(
         name=name,
-        slug=slug or f"{name.lower().replace(' ', '-')}-{constituency.lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}",
+        slug=slug
+        or f"{name.lower().replace(' ', '-')}-{constituency.lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}",
         party_name=party_name,
         party_abbreviation=party_abbreviation,
         constituency_name=constituency,
@@ -61,7 +65,8 @@ def _make_candidate(
         age=55,
         won=won,
         photo_url=None,
-        source_url=source_url or f"https://myneta.info/loksabha2024/candidate.php?candidate_id={cid}",
+        source_url=source_url
+        or f"https://myneta.info/loksabha2024/candidate.php?candidate_id={cid}",
         candidate_id=cid,
         election_year=2024,
         election_date=date(2024, 5, 4),
@@ -102,6 +107,7 @@ class TestAdrWriterCore:
 
         # Verify source snapshot was created
         from netacheck.models.source import SourceSnapshot
+
         result = await db_session.execute(
             select(SourceSnapshot).where(SourceSnapshot.url == candidate.source_url)
         )
@@ -125,14 +131,14 @@ class TestAdrWriterCore:
         assert er.won is True
 
         # Verify AffidavitEntry with source_snapshot_id
-        entry_result = await db_session.execute(
-            select(AffidavitEntry)
-        )
+        entry_result = await db_session.execute(select(AffidavitEntry))
         entries = entry_result.scalars().all()
         # Find entries for this politician's affidavit
         our_entry = next((e for e in entries if e.affidavit_id is not None), None)
         assert our_entry is not None
-        assert our_entry.source_snapshot_id is not None, "Hard constraint violated: AffidavitEntry has no source_snapshot_id"
+        assert (
+            our_entry.source_snapshot_id is not None
+        ), "Hard constraint violated: AffidavitEntry has no source_snapshot_id"
 
     async def test_write_all_affidavit_entries_have_source(self, db_session: AsyncSession) -> None:
         """THE core constraint: every AffidavitEntry must have source_snapshot_id."""
@@ -146,10 +152,13 @@ class TestAdrWriterCore:
             text("SELECT COUNT(*) FROM affidavit_entry WHERE source_snapshot_id IS NULL")
         )
         null_count = result.scalar_one()
-        assert null_count == 0, f"Found {null_count} AffidavitEntry rows without source_snapshot_id — hard constraint violated!"
+        assert (
+            null_count == 0
+        ), f"Found {null_count} AffidavitEntry rows without source_snapshot_id — hard constraint violated!"
 
     async def test_write_state_created(self, db_session: AsyncSession) -> None:
         from netacheck.models.geography import State
+
         candidate = _make_candidate(state="MAHARASHTRA")
         html = _make_html(candidate.candidate_id)
         writer = AdrWriter(db_session)
@@ -161,17 +170,21 @@ class TestAdrWriterCore:
 
     async def test_write_constituency_created(self, db_session: AsyncSession) -> None:
         from netacheck.models.geography import Constituency
+
         candidate = _make_candidate(constituency="PUNE RURAL")
         html = _make_html(candidate.candidate_id)
         writer = AdrWriter(db_session)
         await writer.write(candidate, html)
 
-        result = await db_session.execute(select(Constituency).where(Constituency.name == "PUNE RURAL"))
+        result = await db_session.execute(
+            select(Constituency).where(Constituency.name == "PUNE RURAL")
+        )
         constituency = result.scalar_one_or_none()
         assert constituency is not None
 
     async def test_write_party_created(self, db_session: AsyncSession) -> None:
         from netacheck.models.politician import PoliticalParty
+
         abbr = f"TSTP{uuid.uuid4().hex[:2].upper()}"
         candidate = _make_candidate(party_abbreviation=abbr, party_name=f"Test State Party {abbr}")
         html = _make_html(candidate.candidate_id)
@@ -221,14 +234,26 @@ class TestAdrWriterCriminalCases:
     async def test_write_multiple_criminal_cases(self, db_session: AsyncSession) -> None:
         criminal_cases = [
             NormalisedCriminalCase(
-                case_type="pending", fir_no="FIR-001", case_no="CC-001",
-                court="Court A", section_of_law="302 IPC", offence_description="Murder",
-                status=CaseStatus.PENDING, severity=Severity.HEINOUS, charges_framed=True,
+                case_type="pending",
+                fir_no="FIR-001",
+                case_no="CC-001",
+                court="Court A",
+                section_of_law="302 IPC",
+                offence_description="Murder",
+                status=CaseStatus.PENDING,
+                severity=Severity.HEINOUS,
+                charges_framed=True,
             ),
             NormalisedCriminalCase(
-                case_type="convicted", fir_no="FIR-002", case_no="CC-002",
-                court="Court B", section_of_law="420 IPC", offence_description="Fraud",
-                status=CaseStatus.CONVICTED, severity=Severity.MINOR, charges_framed=False,
+                case_type="convicted",
+                fir_no="FIR-002",
+                case_no="CC-002",
+                court="Court B",
+                section_of_law="420 IPC",
+                offence_description="Fraud",
+                status=CaseStatus.CONVICTED,
+                severity=Severity.MINOR,
+                charges_framed=False,
             ),
         ]
         candidate = _make_candidate(criminal_cases=criminal_cases)
@@ -334,7 +359,9 @@ class TestAdrWriterAssets:
 
 
 class TestAdrWriterIdempotency:
-    async def test_duplicate_html_raises_duplicate_snapshot_error(self, db_session: AsyncSession) -> None:
+    async def test_duplicate_html_raises_duplicate_snapshot_error(
+        self, db_session: AsyncSession
+    ) -> None:
         """Same HTML bytes → DuplicateSnapshotError — the pipeline's idempotency guarantee."""
         candidate = _make_candidate()
         html = _make_html(candidate.candidate_id, "fixed-content")  # Deterministic content
@@ -363,9 +390,7 @@ class TestAdrWriterIdempotency:
         # Different HTML for same politician (e.g., page updated)
         await writer.write(candidate2, html2)
 
-        result = await db_session.execute(
-            select(Politician).where(Politician.slug == slug)
-        )
+        result = await db_session.execute(select(Politician).where(Politician.slug == slug))
         politicians = result.scalars().all()
         assert len(politicians) == 1, "Duplicate politician created for same slug!"
 

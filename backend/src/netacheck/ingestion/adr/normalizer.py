@@ -14,13 +14,15 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import TYPE_CHECKING
 
-from slugify import slugify  # type: ignore[import-untyped]
+from slugify import slugify
 
-from netacheck.ingestion.adr.parser import AdrRawAsset, AdrRawCandidate, AdrRawCriminalCase
 from netacheck.models.assets import AssetCategory, AssetOwnership
 from netacheck.models.criminal import CaseStatus, Severity
 
+if TYPE_CHECKING:
+    from netacheck.ingestion.adr.parser import AdrRawAsset, AdrRawCandidate, AdrRawCriminalCase
 
 # ---------------------------------------------------------------------------
 # Normalised output containers (plain dataclasses — no SQLAlchemy yet)
@@ -204,7 +206,9 @@ def _parse_inr(raw: str) -> Decimal | None:
     if not raw:
         return None
     # Strip currency symbol and whitespace noise
-    cleaned = raw.replace("Rs", "").replace("&nbsp;", "").replace("\xa0", " ").replace("~", "").strip()
+    cleaned = (
+        raw.replace("Rs", "").replace("&nbsp;", "").replace("\xa0", " ").replace("~", "").strip()
+    )
     if cleaned.lower() in ("nil", "0", "-", ""):
         return None
     # Extract the first "number" token — digits, commas, dots only
@@ -225,8 +229,22 @@ def _parse_int(raw: str) -> int | None:
 
 
 _SERIOUS_SECTIONS = {
-    "302", "304", "307", "308", "376", "377", "395", "396",
-    "397", "398", "399", "400", "436", "449", "450", "120B",
+    "302",
+    "304",
+    "307",
+    "308",
+    "376",
+    "377",
+    "395",
+    "396",
+    "397",
+    "398",
+    "399",
+    "400",
+    "436",
+    "449",
+    "450",
+    "120B",
 }
 
 _SERIOUS_ACTS = [
@@ -379,4 +397,3 @@ def _normalise_asset_row(raw: AdrRawAsset, asset_type: str) -> list[NormalisedAs
                 )
 
     return results
-

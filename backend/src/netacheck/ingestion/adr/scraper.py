@@ -8,7 +8,7 @@ URL pattern: https://myneta.info/loksabha2024/
 from __future__ import annotations
 
 import re
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -19,12 +19,15 @@ from netacheck.ingestion.base import (
     ScraperSession,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 logger = structlog.get_logger(__name__)
 
 BASE_URL = "https://myneta.info"
 ELECTION_FOLDER = "loksabha2024"
 
-# MyNeta Lok Sabha 2024 has constituency IDs 1–580 (not all exist — gaps OK)
+# MyNeta Lok Sabha 2024 has constituency IDs 1-580 (not all exist - gaps OK)
 LS2024_CONSTITUENCY_IDS = list(range(1, 581))
 
 

@@ -11,22 +11,21 @@ Validates that a complete, sourced data chain is created in the DB.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.ingestion.adr.normalizer import AdrNormalizer
 from netacheck.ingestion.adr.parser import AdrParser
 from netacheck.ingestion.adr.writer import AdrWriter
 from netacheck.ingestion.base import DuplicateSnapshotError
-from netacheck.models.affidavit import AffidavitEntry
-from netacheck.models.assets import AssetDeclaration
-from netacheck.models.criminal import CriminalCase
-from netacheck.models.election import ElectionResult
-from netacheck.models.geography import Constituency, State
-from netacheck.models.politician import PoliticalParty, Politician, PoliticianAlias
+from netacheck.models.geography import State
+from netacheck.models.politician import Politician, PoliticianAlias
 from netacheck.models.source import SourceProvider, SourceSnapshot
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 pytestmark = pytest.mark.integration
 
@@ -42,7 +41,7 @@ def _load(name: str) -> bytes:
 # ---------------------------------------------------------------------------
 
 
-def _count_result(scalars: list) -> int:
+def _count_result(scalars: list[Any]) -> int:
     return len(scalars)
 
 
@@ -65,7 +64,9 @@ class TestAdrPipelineE2E:
         raw = AdrParser().parse(html, candidate_id=7896, source_url=source_url)
         candidate = AdrNormalizer().normalise(raw)
 
-        assert candidate is not None, "Normalizer returned None — page is too sparse or parse failed"
+        assert (
+            candidate is not None
+        ), "Normalizer returned None — page is too sparse or parse failed"
         assert "khandelwal" in candidate.slug.lower()
         assert candidate.won is True
 
@@ -121,7 +122,9 @@ class TestAdrPipelineDataIntegrity:
         await writer.write(candidate, html)
 
         # Verify SourceSnapshot exists
-        result = await db_session.execute(select(SourceSnapshot).where(SourceSnapshot.url == source_url))
+        result = await db_session.execute(
+            select(SourceSnapshot).where(SourceSnapshot.url == source_url)
+        )
         snap = result.scalar_one_or_none()
         assert snap is not None
         assert snap.parser_version == "1.0.0"
@@ -144,7 +147,9 @@ class TestAdrPipelineDataIntegrity:
         assert provider is not None
         assert "myneta" in provider.base_url.lower()
 
-    async def test_all_affidavit_entries_have_source_after_pipeline(self, db_session: AsyncSession) -> None:
+    async def test_all_affidavit_entries_have_source_after_pipeline(
+        self, db_session: AsyncSession
+    ) -> None:
         """
         THE most critical integrity check.
         After running the pipeline, zero AffidavitEntry rows should have null source_snapshot_id.
@@ -162,9 +167,9 @@ class TestAdrPipelineDataIntegrity:
             text("SELECT COUNT(*) FROM affidavit_entry WHERE source_snapshot_id IS NULL")
         )
         null_count = result.scalar_one()
-        assert null_count == 0, (
-            f"CONSTRAINT VIOLATION: {null_count} AffidavitEntry rows have null source_snapshot_id"
-        )
+        assert (
+            null_count == 0
+        ), f"CONSTRAINT VIOLATION: {null_count} AffidavitEntry rows have null source_snapshot_id"
 
     async def test_politician_alias_created(self, db_session: AsyncSession) -> None:
         html = _load("candidate_winner_with_cases.html")
@@ -187,7 +192,9 @@ class TestAdrPipelineDataIntegrity:
 class TestAdrPipelineIdempotency:
     """Verify idempotency: running the pipeline twice with the same HTML is safe."""
 
-    async def test_re_run_same_html_raises_duplicate_snapshot_error(self, db_session: AsyncSession) -> None:
+    async def test_re_run_same_html_raises_duplicate_snapshot_error(
+        self, db_session: AsyncSession
+    ) -> None:
         """
         Running the pipeline twice with the exact same HTML bytes must raise
         DuplicateSnapshotError on the second run — not silently create duplicate data.

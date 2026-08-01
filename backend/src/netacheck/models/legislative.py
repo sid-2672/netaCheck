@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -13,8 +14,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.legislature import LegislativeTerm
+    from netacheck.models.source import SourceSnapshot
 
-class ActivityType(str, enum.Enum):
+
+class ActivityType(enum.StrEnum):
     STARRED_QUESTION = "STARRED_QUESTION"
     UNSTARRED_QUESTION = "UNSTARRED_QUESTION"
     PRIVATE_MEMBER_BILL = "PRIVATE_MEMBER_BILL"
@@ -50,10 +55,10 @@ class LegislativeActivity(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ministry_concerned: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_admitted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
-    legislative_term: Mapped["LegislativeTerm"] = relationship(  # type: ignore[name-defined]
+    legislative_term: Mapped[LegislativeTerm] = relationship(
         "LegislativeTerm", back_populates="legislative_activities"
     )
-    source_snapshot: Mapped["SourceSnapshot"] = relationship("SourceSnapshot")  # type: ignore[name-defined]
+    source_snapshot: Mapped[SourceSnapshot] = relationship("SourceSnapshot")
 
     def __repr__(self) -> str:
         return f"<LegislativeActivity {self.activity_type} {self.activity_date}>"

@@ -7,13 +7,17 @@ applies defaults, and raises on missing required fields.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 from pydantic import ValidationError
 
+if TYPE_CHECKING:
+    from netacheck.core.config import Settings
 
-def _make_settings(**overrides: object) -> object:
+
+def _make_settings(**overrides: Any) -> Settings:
     """Helper: build a valid Settings object with test defaults."""
-    # Import here to avoid module-level settings singleton issues
     from netacheck.core.config import Settings
 
     defaults = {
@@ -27,66 +31,62 @@ def _make_settings(**overrides: object) -> object:
 
 
 class TestSettingsDefaults:
-    def test_app_name_default(self):
+    def test_app_name_default(self) -> None:
         s = _make_settings()
-        assert s.app_name == "NetaCheck"  # type: ignore[union-attr]
+        assert s.app_name == "NetaCheck"
 
-    def test_environment_defaults_to_development(self):
+    def test_environment_defaults_to_development(self) -> None:
         # Explicitly pass environment='development' to avoid ENVIRONMENT env var leakage
         s = _make_settings(environment="development")
-        assert s.environment == "development"  # type: ignore[union-attr]
+        assert s.environment == "development"
 
-    def test_debug_defaults_to_false(self):
+    def test_debug_defaults_to_false(self) -> None:
         s = _make_settings()
-        assert s.debug is False  # type: ignore[union-attr]
+        assert s.debug is False
 
-    def test_log_level_default(self):
+    def test_log_level_default(self) -> None:
         s = _make_settings()
-        assert s.log_level == "INFO"  # type: ignore[union-attr]
+        assert s.log_level == "INFO"
 
-    def test_scraper_delay_default(self):
+    def test_scraper_delay_default(self) -> None:
         s = _make_settings()
-        assert s.scraper_request_delay_seconds == 1.5  # type: ignore[union-attr]
+        assert s.scraper_request_delay_seconds == 1.5
 
-    def test_scraper_respect_robots_default(self):
+    def test_scraper_respect_robots_default(self) -> None:
         s = _make_settings()
-        assert s.scraper_respect_robots_txt is True  # type: ignore[union-attr]
+        assert s.scraper_respect_robots_txt is True
 
 
 class TestDatabaseUrlNormalization:
-    def test_postgres_prefix_converted(self):
-        s = _make_settings(
-            database_url="postgres://user:pass@localhost:5432/db"
-        )
-        assert str(s.database_url).startswith("postgresql+asyncpg://")  # type: ignore[union-attr]
+    def test_postgres_prefix_converted(self) -> None:
+        s = _make_settings(database_url="postgres://user:pass@localhost:5432/db")
+        assert str(s.database_url).startswith("postgresql+asyncpg://")
 
-    def test_postgresql_prefix_converted(self):
-        s = _make_settings(
-            database_url="postgresql://user:pass@localhost:5432/db"
-        )
-        assert str(s.database_url).startswith("postgresql+asyncpg://")  # type: ignore[union-attr]
+    def test_postgresql_prefix_converted(self) -> None:
+        s = _make_settings(database_url="postgresql://user:pass@localhost:5432/db")
+        assert str(s.database_url).startswith("postgresql+asyncpg://")
 
-    def test_asyncpg_prefix_unchanged(self):
+    def test_asyncpg_prefix_unchanged(self) -> None:
         url = "postgresql+asyncpg://user:pass@localhost:5432/db"
         s = _make_settings(database_url=url)
-        assert str(s.database_url).startswith("postgresql+asyncpg://")  # type: ignore[union-attr]
+        assert str(s.database_url).startswith("postgresql+asyncpg://")
 
 
 class TestEnvironmentProperties:
-    def test_is_production(self):
+    def test_is_production(self) -> None:
         s = _make_settings(environment="production")
-        assert s.is_production is True  # type: ignore[union-attr]
-        assert s.is_development is False  # type: ignore[union-attr]
-        assert s.is_test is False  # type: ignore[union-attr]
+        assert s.is_production is True
+        assert s.is_development is False
+        assert s.is_test is False
 
-    def test_is_development(self):
+    def test_is_development(self) -> None:
         s = _make_settings(environment="development")
-        assert s.is_development is True  # type: ignore[union-attr]
-        assert s.is_production is False  # type: ignore[union-attr]
+        assert s.is_development is True
+        assert s.is_production is False
 
-    def test_is_test(self):
+    def test_is_test(self) -> None:
         s = _make_settings(environment="test")
-        assert s.is_test is True  # type: ignore[union-attr]
+        assert s.is_test is True
 
 
 class TestRequiredFields:
@@ -100,7 +100,7 @@ class TestRequiredFields:
         monkeypatch.delenv("DATABASE_URL", raising=False)
 
         with pytest.raises(ValidationError):
-            Settings(  # type: ignore[call-arg]
+            Settings(
                 admin_api_key="key",
                 database_url="postgresql+asyncpg://u:p@h/db",
                 # secret_key intentionally omitted
@@ -115,7 +115,7 @@ class TestRequiredFields:
         monkeypatch.delenv("DATABASE_URL", raising=False)
 
         with pytest.raises(ValidationError):
-            Settings(  # type: ignore[call-arg]
+            Settings(
                 secret_key="key",
                 database_url="postgresql+asyncpg://u:p@h/db",
                 # admin_api_key intentionally omitted

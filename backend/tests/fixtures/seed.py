@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import structlog
 
@@ -31,10 +30,25 @@ log = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 STATES = [
-    {"name": "Uttar Pradesh", "slug": "uttar-pradesh", "iso_code": "IN-UP", "is_union_territory": False},
-    {"name": "Maharashtra", "slug": "maharashtra", "iso_code": "IN-MH", "is_union_territory": False},
+    {
+        "name": "Uttar Pradesh",
+        "slug": "uttar-pradesh",
+        "iso_code": "IN-UP",
+        "is_union_territory": False,
+    },
+    {
+        "name": "Maharashtra",
+        "slug": "maharashtra",
+        "iso_code": "IN-MH",
+        "is_union_territory": False,
+    },
     {"name": "Tamil Nadu", "slug": "tamil-nadu", "iso_code": "IN-TN", "is_union_territory": False},
-    {"name": "West Bengal", "slug": "west-bengal", "iso_code": "IN-WB", "is_union_territory": False},
+    {
+        "name": "West Bengal",
+        "slug": "west-bengal",
+        "iso_code": "IN-WB",
+        "is_union_territory": False,
+    },
     {"name": "Gujarat", "slug": "gujarat", "iso_code": "IN-GJ", "is_union_territory": False},
 ]
 
@@ -130,16 +144,22 @@ SOURCE_PROVIDERS = [
 # Seed runner
 # ---------------------------------------------------------------------------
 
+
 async def seed() -> None:
     """Run all seed operations inside a single transaction."""
-    from netacheck.models.geography import State, Constituency, ConstituencyType
-    from netacheck.models.politician import Politician, PoliticalParty, Gender, PartyMembership
-    from netacheck.models.source import SourceProvider, SourceSnapshot
-    from netacheck.models.legislature import LegislativeTerm
-    from netacheck.models.election import Election, ElectionResult, ElectionType
     from netacheck.models.affidavit import Affidavit, AffidavitEntry
     from netacheck.models.attendance import AttendanceRecord
-    from netacheck.models.politician import House
+    from netacheck.models.election import Election, ElectionResult, ElectionType
+    from netacheck.models.geography import Constituency, ConstituencyType, State
+    from netacheck.models.legislature import LegislativeTerm
+    from netacheck.models.politician import (
+        Gender,
+        House,
+        PartyMembership,
+        PoliticalParty,
+        Politician,
+    )
+    from netacheck.models.source import SourceProvider, SourceSnapshot
 
     async with async_session_factory() as session:
         async with session.begin():
@@ -151,7 +171,7 @@ async def seed() -> None:
                 state = State(**s)
                 session.add(state)
                 await session.flush()
-                state_objects[s["slug"]] = state
+                state_objects[str(s["slug"])] = state
             log.info("seed_states_done", count=len(state_objects))
 
             # ---- Constituencies ----
@@ -175,7 +195,7 @@ async def seed() -> None:
                 party = PoliticalParty(**p)
                 session.add(party)
                 await session.flush()
-                party_objects[p["slug"]] = party
+                party_objects[str(p["slug"])] = party
             log.info("seed_parties_done", count=len(party_objects))
 
             # ---- Source Providers ----
@@ -184,7 +204,7 @@ async def seed() -> None:
                 provider = SourceProvider(**sp)
                 session.add(provider)
                 await session.flush()
-                provider_objects[sp["short_code"]] = provider
+                provider_objects[str(sp["short_code"])] = provider
             log.info("seed_providers_done", count=len(provider_objects))
 
             # ---- Snapshot (shared dummy) ----
@@ -195,7 +215,7 @@ async def seed() -> None:
                 url=dummy_url,
                 url_hash=hashlib.sha256(dummy_url.encode()).hexdigest(),
                 content_hash=hashlib.sha256(dummy_content).hexdigest(),
-                fetched_at=datetime.now(tz=timezone.utc),
+                fetched_at=datetime.now(tz=UTC),
                 http_status=200,
                 parser_version="0.1.0",
                 raw_content_size_bytes=len(dummy_content),
@@ -208,10 +228,10 @@ async def seed() -> None:
             party_list = list(party_objects.values())
             for i, p_data in enumerate(POLITICIANS):
                 politician = Politician(
-                    name=p_data["name"],
-                    slug=p_data["slug"],
+                    name=str(p_data["name"]),
+                    slug=str(p_data["slug"]),
                     date_of_birth=p_data["date_of_birth"],
-                    gender=Gender(p_data["gender"]),
+                    gender=Gender(str(p_data["gender"])),
                 )
                 session.add(politician)
                 await session.flush()

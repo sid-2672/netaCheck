@@ -5,7 +5,7 @@ Every model module must be imported here so that Base.metadata is fully
 populated when Alembic autogenerate runs.
 """
 
-from netacheck.models import (  # noqa: F401
+from netacheck.models import (
     affidavit,
     assets,
     attendance,

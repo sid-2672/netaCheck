@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -12,6 +13,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 from netacheck.models.politician import House
+
+if TYPE_CHECKING:
+    from netacheck.models.attendance import AttendanceRecord
+    from netacheck.models.geography import Constituency
+    from netacheck.models.legislative import LegislativeActivity
+    from netacheck.models.politician import Politician
 
 
 class LegislativeTerm(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -28,22 +35,18 @@ class LegislativeTerm(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("constituency.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    house: Mapped[House] = mapped_column(
-        Enum(House, name="house_enum"), nullable=False
-    )
+    house: Mapped[House] = mapped_column(Enum(House, name="house_enum"), nullable=False)
     from_date: Mapped[date] = mapped_column(Date, nullable=False)
     to_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     lok_sabha_number: Mapped[int | None] = mapped_column(nullable=True)
     state_represented: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    politician: Mapped["Politician"] = relationship(  # type: ignore[name-defined]
-        "Politician", back_populates="legislative_terms"
-    )
-    constituency: Mapped["Constituency"] = relationship("Constituency")  # type: ignore[name-defined]
-    attendance_records: Mapped[list["AttendanceRecord"]] = relationship(  # type: ignore[name-defined]
+    politician: Mapped[Politician] = relationship("Politician", back_populates="legislative_terms")
+    constituency: Mapped[Constituency] = relationship("Constituency")
+    attendance_records: Mapped[list[AttendanceRecord]] = relationship(
         "AttendanceRecord", back_populates="legislative_term"
     )
-    legislative_activities: Mapped[list["LegislativeActivity"]] = relationship(  # type: ignore[name-defined]
+    legislative_activities: Mapped[list[LegislativeActivity]] = relationship(
         "LegislativeActivity", back_populates="legislative_term"
     )
 

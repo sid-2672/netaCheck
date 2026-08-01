@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from netacheck.models.affidavit import Affidavit, AffidavitEntry
 from netacheck.models.assets import AssetCategory, AssetDeclaration, AssetOwnership
@@ -21,19 +21,20 @@ from netacheck.models.criminal import CaseStatus, CriminalCase, Severity
 from netacheck.models.election import Election, ElectionResult, ElectionType
 from netacheck.models.geography import Constituency, ConstituencyType, State
 from netacheck.models.grading import (
-    Confidence,
     GradeLetter,
-    GradeMetricResult,
     GradeSnapshot,
 )
-from netacheck.models.legislative import LegislativeActivity, ActivityType
+from netacheck.models.legislative import ActivityType, LegislativeActivity
 from netacheck.models.legislature import LegislativeTerm
-from netacheck.models.politician import Gender, House, PartyMembership, PoliticalParty, Politician
+from netacheck.models.politician import House, PoliticalParty, Politician
 from netacheck.models.source import SourceProvider, SourceSnapshot
 from netacheck.repositories.base import AsyncRepository
 from netacheck.repositories.politician import PoliticianRepository
 from netacheck.repositories.report_card import ReportCardRepository
 from netacheck.repositories.source import SourceSnapshotRepository
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 pytestmark = pytest.mark.integration
 
@@ -67,7 +68,9 @@ async def _make_party(session: AsyncSession) -> PoliticalParty:
     return party
 
 
-async def _make_politician(session: AsyncSession, *, name: str | None = None, slug: str | None = None) -> Politician:
+async def _make_politician(
+    session: AsyncSession, *, name: str | None = None, slug: str | None = None
+) -> Politician:
     p = Politician(
         name=name or f"Test Politician {uuid.uuid4().hex[:6]}",
         slug=slug or f"tp-{uuid.uuid4().hex[:10]}",
@@ -88,14 +91,16 @@ async def _make_provider(session: AsyncSession) -> SourceProvider:
     return sp
 
 
-async def _make_snapshot(session: AsyncSession, provider: SourceProvider, content: bytes | None = None) -> SourceSnapshot:
+async def _make_snapshot(
+    session: AsyncSession, provider: SourceProvider, content: bytes | None = None
+) -> SourceSnapshot:
     c = content or f"html-{uuid.uuid4()}".encode()
     snap = SourceSnapshot(
         provider_id=provider.id,
         url=f"https://test.example.com/{uuid.uuid4()}",
         url_hash=hashlib.sha256(f"url-{uuid.uuid4()}".encode()).hexdigest(),
         content_hash=hashlib.sha256(c).hexdigest(),
-        fetched_at=datetime.now(tz=timezone.utc),
+        fetched_at=datetime.now(tz=UTC),
         parser_version="1.0.0",
     )
     session.add(snap)
@@ -107,22 +112,28 @@ async def _make_full_data_chain(session: AsyncSession) -> tuple[Politician, Affi
     """Create a complete politician → affidavit_entry data chain."""
     state = await _make_state(session)
     constituency = Constituency(
-        name=f"C {uuid.uuid4().hex[:6]}", slug=f"c-{uuid.uuid4().hex[:8]}",
-        state_id=state.id, constituency_type=ConstituencyType.LOK_SABHA,
+        name=f"C {uuid.uuid4().hex[:6]}",
+        slug=f"c-{uuid.uuid4().hex[:8]}",
+        state_id=state.id,
+        constituency_type=ConstituencyType.LOK_SABHA,
     )
     session.add(constituency)
     await session.flush()
 
     election = Election(
-        constituency_id=constituency.id, election_type=ElectionType.GENERAL,
-        election_date=date(2024, 5, 4), year=2024,
+        constituency_id=constituency.id,
+        election_type=ElectionType.GENERAL,
+        election_date=date(2024, 5, 4),
+        year=2024,
     )
     session.add(election)
     await session.flush()
 
     politician = await _make_politician(session)
     party = await _make_party(session)
-    er = ElectionResult(election_id=election.id, politician_id=politician.id, party_id=party.id, won=True)
+    er = ElectionResult(
+        election_id=election.id, politician_id=politician.id, party_id=party.id, won=True
+    )
     session.add(er)
     await session.flush()
 
@@ -132,7 +143,9 @@ async def _make_full_data_chain(session: AsyncSession) -> tuple[Politician, Affi
     session.add(affidavit)
     await session.flush()
 
-    entry = AffidavitEntry(affidavit_id=affidavit.id, source_snapshot_id=snap.id, field_name="affidavit_full")
+    entry = AffidavitEntry(
+        affidavit_id=affidavit.id, source_snapshot_id=snap.id, field_name="affidavit_full"
+    )
     session.add(entry)
     await session.flush()
 
@@ -190,7 +203,12 @@ class TestBaseRepository:
 
         repo = StateRepo(db_session)
         slug = f"slug-test-{uuid.uuid4().hex[:8]}"
-        await repo.create(name="Slug State", slug=slug, iso_code=f"SL{uuid.uuid4().hex[:3].upper()}", is_union_territory=False)
+        await repo.create(
+            name="Slug State",
+            slug=slug,
+            iso_code=f"SL{uuid.uuid4().hex[:3].upper()}",
+            is_union_territory=False,
+        )
         found = await repo.get_by_slug(slug)
         assert found is not None
         assert found.slug == slug
@@ -273,7 +291,7 @@ class TestPoliticianRepository:
 
     async def test_get_by_slug_excludes_soft_deleted(self, db_session: AsyncSession) -> None:
         slug = f"deleted-pol-{uuid.uuid4().hex[:8]}"
-        pol = Politician(name="Deleted", slug=slug, deleted_at=datetime.now(tz=timezone.utc))
+        pol = Politician(name="Deleted", slug=slug, deleted_at=datetime.now(tz=UTC))
         db_session.add(pol)
         await db_session.flush()
 
@@ -283,12 +301,14 @@ class TestPoliticianRepository:
 
     async def test_list_active_excludes_soft_deleted(self, db_session: AsyncSession) -> None:
         active = Politician(name="Active", slug=f"active-{uuid.uuid4().hex[:8]}")
-        deleted = Politician(name="Deleted", slug=f"deleted-{uuid.uuid4().hex[:8]}", deleted_at=datetime.now(tz=timezone.utc))
+        deleted = Politician(
+            name="Deleted", slug=f"deleted-{uuid.uuid4().hex[:8]}", deleted_at=datetime.now(tz=UTC)
+        )
         db_session.add_all([active, deleted])
         await db_session.flush()
 
         repo = PoliticianRepository(db_session)
-        items, total = await repo.list_active(offset=0, limit=100)
+        items, _total = await repo.list_active(offset=0, limit=100)
         slugs = [p.slug for p in items]
         assert active.slug in slugs
         assert deleted.slug not in slugs
@@ -300,7 +320,7 @@ class TestPoliticianRepository:
         await db_session.flush()
 
         repo = PoliticianRepository(db_session)
-        results, total = await repo.search(unique_name[:10])
+        results, _total = await repo.search(unique_name[:10])
         slugs = [p.slug for p in results]
         assert pol.slug in slugs
 
@@ -314,7 +334,7 @@ class TestSourceRepository:
     async def test_get_by_hashes(self, db_session: AsyncSession) -> None:
         provider = await _make_provider(db_session)
         content = b"test content abc"
-        url = f"https://test.example.com/{uuid.uuid4()}"
+        f"https://test.example.com/{uuid.uuid4()}"
         snap = await _make_snapshot(db_session, provider, content=content)
         url_hash = snap.url_hash
         content_hash_val = snap.content_hash
@@ -382,6 +402,7 @@ class TestReportCardRepository:
 
     async def test_get_assets_for_politician(self, db_session: AsyncSession) -> None:
         from decimal import Decimal
+
         politician, entry = await _make_full_data_chain(db_session)
 
         asset = AssetDeclaration(
@@ -478,15 +499,14 @@ class TestReportCardRepository:
         assert len(activities) >= 1
 
     async def test_get_latest_grade(self, db_session: AsyncSession) -> None:
-        from decimal import Decimal
         politician = await _make_politician(db_session)
 
         gs = GradeSnapshot(
             politician_id=politician.id,
             overall_grade=GradeLetter.B,
             engine_version="1.0.0",
-            computed_at=datetime.now(tz=timezone.utc),
-            data_as_of=datetime.now(tz=timezone.utc),
+            computed_at=datetime.now(tz=UTC),
+            data_as_of=datetime.now(tz=UTC),
         )
         db_session.add(gs)
         await db_session.flush()
@@ -496,13 +516,17 @@ class TestReportCardRepository:
         assert grade is not None
         assert grade.overall_grade == GradeLetter.B
 
-    async def test_get_latest_grade_returns_none_when_no_grade(self, db_session: AsyncSession) -> None:
+    async def test_get_latest_grade_returns_none_when_no_grade(
+        self, db_session: AsyncSession
+    ) -> None:
         politician = await _make_politician(db_session)
         repo = ReportCardRepository(db_session)
         grade = await repo.get_latest_grade(politician.id)
         assert grade is None
 
-    async def test_criminal_cases_empty_for_unknown_politician(self, db_session: AsyncSession) -> None:
+    async def test_criminal_cases_empty_for_unknown_politician(
+        self, db_session: AsyncSession
+    ) -> None:
         repo = ReportCardRepository(db_session)
         cases = await repo.get_criminal_cases(uuid.uuid4())
         assert cases == []

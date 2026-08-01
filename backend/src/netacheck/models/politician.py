@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -13,15 +14,20 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import SlugMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.election import ElectionResult
+    from netacheck.models.grading import GradeSnapshot
+    from netacheck.models.legislature import LegislativeTerm
 
-class Gender(str, enum.Enum):
+
+class Gender(enum.StrEnum):
     MALE = "MALE"
     FEMALE = "FEMALE"
     OTHER = "OTHER"
     UNDISCLOSED = "UNDISCLOSED"
 
 
-class House(str, enum.Enum):
+class House(enum.StrEnum):
     LOK_SABHA = "LOK_SABHA"
     RAJYA_SABHA = "RAJYA_SABHA"
     VIDHAN_SABHA = "VIDHAN_SABHA"
@@ -38,7 +44,7 @@ class PoliticalParty(UUIDPrimaryKeyMixin, SlugMixin, TimestampMixin, Base):
     is_national_party: Mapped[bool] = mapped_column(default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
-    memberships: Mapped[list["PartyMembership"]] = relationship(
+    memberships: Mapped[list[PartyMembership]] = relationship(
         "PartyMembership", back_populates="party"
     )
 
@@ -63,19 +69,19 @@ class Politician(UUIDPrimaryKeyMixin, SlugMixin, SoftDeleteMixin, TimestampMixin
     pan_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    aliases: Mapped[list["PoliticianAlias"]] = relationship(
+    aliases: Mapped[list[PoliticianAlias]] = relationship(
         "PoliticianAlias", back_populates="politician", lazy="selectin"
     )
-    party_memberships: Mapped[list["PartyMembership"]] = relationship(
+    party_memberships: Mapped[list[PartyMembership]] = relationship(
         "PartyMembership", back_populates="politician", lazy="selectin"
     )
-    legislative_terms: Mapped[list["LegislativeTerm"]] = relationship(  # type: ignore[name-defined]
+    legislative_terms: Mapped[list[LegislativeTerm]] = relationship(
         "LegislativeTerm", back_populates="politician"
     )
-    election_results: Mapped[list["ElectionResult"]] = relationship(  # type: ignore[name-defined]
+    election_results: Mapped[list[ElectionResult]] = relationship(
         "ElectionResult", back_populates="politician"
     )
-    grade_snapshots: Mapped[list["GradeSnapshot"]] = relationship(  # type: ignore[name-defined]
+    grade_snapshots: Mapped[list[GradeSnapshot]] = relationship(
         "GradeSnapshot", back_populates="politician"
     )
 
@@ -95,7 +101,7 @@ class PoliticianAlias(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     alias: Mapped[str] = mapped_column(String(300), nullable=False, index=True)
     source: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    politician: Mapped["Politician"] = relationship("Politician", back_populates="aliases")
+    politician: Mapped[Politician] = relationship("Politician", back_populates="aliases")
 
     def __repr__(self) -> str:
         return f"<PoliticianAlias {self.alias}>"
@@ -119,8 +125,8 @@ class PartyMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     to_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_primary: Mapped[bool] = mapped_column(default=True, nullable=False)
 
-    politician: Mapped["Politician"] = relationship("Politician", back_populates="party_memberships")
-    party: Mapped["PoliticalParty"] = relationship("PoliticalParty", back_populates="memberships")
+    politician: Mapped[Politician] = relationship("Politician", back_populates="party_memberships")
+    party: Mapped[PoliticalParty] = relationship("PoliticalParty", back_populates="memberships")
 
     def __repr__(self) -> str:
         return f"<PartyMembership politician={self.politician_id} party={self.party_id}>"

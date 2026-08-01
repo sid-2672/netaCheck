@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -13,7 +14,7 @@ from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class CorrectionStatus(str, enum.Enum):
+class CorrectionStatus(enum.StrEnum):
     PENDING = "PENDING"
     UNDER_REVIEW = "UNDER_REVIEW"
     APPROVED = "APPROVED"
@@ -45,7 +46,7 @@ class CorrectionRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     reviewer_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    history: Mapped[list["CorrectionHistory"]] = relationship(
+    history: Mapped[list[CorrectionHistory]] = relationship(
         "CorrectionHistory", back_populates="correction_request"
     )
 
@@ -71,7 +72,7 @@ class CorrectionHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     changed_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    correction_request: Mapped["CorrectionRequest"] = relationship(
+    correction_request: Mapped[CorrectionRequest] = relationship(
         "CorrectionRequest", back_populates="history"
     )
 

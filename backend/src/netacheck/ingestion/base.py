@@ -137,7 +137,7 @@ class ScraperSession:
         self._client: httpx.AsyncClient | None = None
         self._timeout = timeout
 
-    async def __aenter__(self) -> "ScraperSession":
+    async def __aenter__(self) -> ScraperSession:
         self._client = httpx.AsyncClient(
             headers={"User-Agent": USER_AGENT},
             timeout=self._timeout,

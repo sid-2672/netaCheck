@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -13,8 +14,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.affidavit import AffidavitEntry
 
-class AssetCategory(str, enum.Enum):
+
+class AssetCategory(enum.StrEnum):
     IMMOVABLE = "IMMOVABLE"
     MOVABLE = "MOVABLE"
     FINANCIAL = "FINANCIAL"
@@ -22,7 +26,7 @@ class AssetCategory(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class AssetOwnership(str, enum.Enum):
+class AssetOwnership(enum.StrEnum):
     SELF = "SELF"
     SPOUSE = "SPOUSE"
     DEPENDENT = "DEPENDENT"
@@ -54,7 +58,7 @@ class AssetDeclaration(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     raw_value_text: Mapped[str | None] = mapped_column(String(200), nullable=True)
     location: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    affidavit_entry: Mapped["AffidavitEntry"] = relationship(  # type: ignore[name-defined]
+    affidavit_entry: Mapped[AffidavitEntry] = relationship(
         "AffidavitEntry", back_populates="asset_declarations"
     )
 

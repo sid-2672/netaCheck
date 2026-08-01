@@ -13,7 +13,7 @@ No authentication required. No rate limiting on health endpoints.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 from fastapi.responses import ORJSONResponse
@@ -43,7 +43,7 @@ async def health() -> ORJSONResponse:
             "app": settings.app_name,
             "version": __version__,
             "environment": settings.environment,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
     )
 
@@ -82,6 +82,6 @@ async def health_ready() -> ORJSONResponse:
                 }
             },
             "version": __version__,
-            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         },
     )

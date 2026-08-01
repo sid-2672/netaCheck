@@ -7,7 +7,7 @@ Handles idempotent snapshot creation keyed by (url_hash, content_hash).
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -37,9 +37,7 @@ class SourceSnapshotRepository(AsyncRepository[SourceSnapshot]):
         """Produce a SHA-256 hash of raw response bytes."""
         return hashlib.sha256(content).hexdigest()
 
-    async def get_by_hashes(
-        self, url_hash: str, content_hash: str
-    ) -> SourceSnapshot | None:
+    async def get_by_hashes(self, url_hash: str, content_hash: str) -> SourceSnapshot | None:
         """Look up an existing snapshot by its idempotency key."""
         stmt = select(SourceSnapshot).where(
             SourceSnapshot.url_hash == url_hash,
@@ -78,7 +76,7 @@ class SourceSnapshotRepository(AsyncRepository[SourceSnapshot]):
             url=url,
             url_hash=url_hash,
             content_hash=content_hash,
-            fetched_at=datetime.now(tz=timezone.utc),
+            fetched_at=datetime.now(tz=UTC),
             http_status=http_status,
             parser_version=parser_version,
             raw_content_size_bytes=len(content),

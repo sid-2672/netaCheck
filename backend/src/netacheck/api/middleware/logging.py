@@ -15,12 +15,16 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from starlette.requests import Request
+    from starlette.responses import Response
 
 log = structlog.get_logger(__name__)
 
@@ -28,7 +32,9 @@ log = structlog.get_logger(__name__)
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Structured access logging middleware."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:  # type: ignore[override]
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         request_id = str(uuid.uuid4())
 
         # Bind request_id to structlog context for this request's lifetime

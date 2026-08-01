@@ -9,11 +9,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
-
 from netacheck.ingestion.adr.normalizer import (
     AdrNormalizer,
-    NormalisedCandidate,
     _classify_severity,
     _clean_name,
     _make_slug,
@@ -24,7 +21,6 @@ from netacheck.ingestion.adr.normalizer import (
 from netacheck.ingestion.adr.parser import AdrRawAsset, AdrRawCandidate, AdrRawCriminalCase
 from netacheck.models.assets import AssetCategory, AssetOwnership
 from netacheck.models.criminal import CaseStatus, Severity
-
 
 # ---------------------------------------------------------------------------
 # _clean_name
@@ -143,15 +139,15 @@ class TestParseParty:
         assert "Bharatiya Janata Party" in full
 
     def test_known_inc(self) -> None:
-        abbr, full = _parse_party("INC")
+        _abbr, full = _parse_party("INC")
         assert full == "Indian National Congress"
 
     def test_known_aap(self) -> None:
-        abbr, full = _parse_party("AAP")
+        _abbr, full = _parse_party("AAP")
         assert full == "Aam Aadmi Party"
 
     def test_known_ind(self) -> None:
-        abbr, full = _parse_party("IND")
+        _abbr, full = _parse_party("IND")
         assert full == "Independent"
 
     def test_empty_returns_independent(self) -> None:
@@ -165,7 +161,7 @@ class TestParseParty:
         assert full == "Janata Dal United"
 
     def test_unknown_short_caps_treated_as_abbreviation(self) -> None:
-        abbr, full = _parse_party("DMK")
+        abbr, _full = _parse_party("DMK")
         assert abbr == "DMK"
 
 

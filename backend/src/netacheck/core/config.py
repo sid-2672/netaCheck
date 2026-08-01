@@ -77,7 +77,13 @@ class Settings(BaseSettings):
     storage_bucket_name: str = "netacheck-pdfs"
     storage_public_url: str | None = None
 
-    @field_validator("storage_public_url", "storage_endpoint_url", "storage_access_key_id", "storage_secret_access_key", mode="before")
+    @field_validator(
+        "storage_public_url",
+        "storage_endpoint_url",
+        "storage_access_key_id",
+        "storage_secret_access_key",
+        mode="before",
+    )
     @classmethod
     def empty_str_to_none(cls, v: object) -> object:
         """Coerce empty strings to None for optional fields."""
@@ -169,7 +175,7 @@ def get_settings() -> Settings:
     Cached so environment variables are read only once per process.
     In tests, call `get_settings.cache_clear()` after patching env vars.
     """
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
 
 
 #: Module-level singleton for convenient import

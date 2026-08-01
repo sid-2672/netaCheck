@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -64,9 +65,7 @@ class SourceSnapshot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "source_snapshot"
 
-    __table_args__ = (
-        UniqueConstraint("url_hash", "content_hash", name="uq_snapshot_url_content"),
-    )
+    __table_args__ = (UniqueConstraint("url_hash", "content_hash", name="uq_snapshot_url_content"),)
 
     provider_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -81,9 +80,7 @@ class SourceSnapshot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     content_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="SHA-256 of raw response body"
     )
-    fetched_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     parser_version: Mapped[str] = mapped_column(
         String(50), nullable=False, comment="Semantic version of the parser used"
@@ -91,9 +88,7 @@ class SourceSnapshot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     raw_content_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    provider: Mapped[SourceProvider] = relationship(
-        "SourceProvider", back_populates="snapshots"
-    )
+    provider: Mapped[SourceProvider] = relationship("SourceProvider", back_populates="snapshots")
 
     def __repr__(self) -> str:
         return f"<SourceSnapshot {self.url_hash[:8]}… @ {self.fetched_at}>"

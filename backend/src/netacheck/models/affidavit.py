@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -16,6 +17,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from netacheck.models.assets import AssetDeclaration
+    from netacheck.models.criminal import CriminalCase
+    from netacheck.models.election import ElectionResult
+    from netacheck.models.source import SourceSnapshot
 
 
 class Affidavit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -43,9 +50,11 @@ class Affidavit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     affidavit_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_revised: Mapped[bool] = mapped_column(default=False, nullable=False)
 
-    election_result: Mapped["ElectionResult"] = relationship("ElectionResult", back_populates="affidavits")
-    source_snapshot: Mapped["SourceSnapshot"] = relationship("SourceSnapshot")
-    entries: Mapped[list["AffidavitEntry"]] = relationship(
+    election_result: Mapped[ElectionResult] = relationship(
+        "ElectionResult", back_populates="affidavits"
+    )
+    source_snapshot: Mapped[SourceSnapshot] = relationship("SourceSnapshot")
+    entries: Mapped[list[AffidavitEntry]] = relationship(
         "AffidavitEntry", back_populates="affidavit"
     )
 
@@ -89,10 +98,12 @@ class AffidavitEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(100), nullable=True, comment="Section of the affidavit form"
     )
 
-    affidavit: Mapped["Affidavit"] = relationship("Affidavit", back_populates="entries")
-    source_snapshot: Mapped["SourceSnapshot"] = relationship("SourceSnapshot")
-    criminal_cases: Mapped[list["CriminalCase"]] = relationship("CriminalCase", back_populates="affidavit_entry")
-    asset_declarations: Mapped[list["AssetDeclaration"]] = relationship(
+    affidavit: Mapped[Affidavit] = relationship("Affidavit", back_populates="entries")
+    source_snapshot: Mapped[SourceSnapshot] = relationship("SourceSnapshot")
+    criminal_cases: Mapped[list[CriminalCase]] = relationship(
+        "CriminalCase", back_populates="affidavit_entry"
+    )
+    asset_declarations: Mapped[list[AssetDeclaration]] = relationship(
         "AssetDeclaration", back_populates="affidavit_entry"
     )
 

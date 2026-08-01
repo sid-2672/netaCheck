@@ -6,13 +6,15 @@ Domain-specific queries for politician data access.
 
 from __future__ import annotations
 
-import uuid
-from typing import Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import or_, select
 
-from netacheck.models.politician import Politician, PoliticalParty
+from netacheck.models.politician import PoliticalParty, Politician
 from netacheck.repositories.base import AsyncRepository
+
+if TYPE_CHECKING:
+    import uuid
 
 
 class PoliticianRepository(AsyncRepository[Politician]):
@@ -21,9 +23,7 @@ class PoliticianRepository(AsyncRepository[Politician]):
     async def get_by_slug(self, slug: str) -> Politician | None:
         """Fetch a politician by slug, excluding soft-deleted records."""
         stmt = (
-            select(Politician)
-            .where(Politician.slug == slug)
-            .where(Politician.deleted_at.is_(None))
+            select(Politician).where(Politician.slug == slug).where(Politician.deleted_at.is_(None))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -84,9 +84,7 @@ class PoliticianRepository(AsyncRepository[Politician]):
         from sqlalchemy import func
 
         count_stmt = (
-            select(func.count())
-            .select_from(Politician)
-            .where(Politician.deleted_at.is_(None))
+            select(func.count()).select_from(Politician).where(Politician.deleted_at.is_(None))
         )
         total_result = await self.session.execute(count_stmt)
         total = total_result.scalar_one()
@@ -111,6 +109,10 @@ class PartyRepository(AsyncRepository[PoliticalParty]):
         return result.scalar_one_or_none()
 
     async def list_active(self) -> list[PoliticalParty]:
-        stmt = select(PoliticalParty).where(PoliticalParty.is_active.is_(True)).order_by(PoliticalParty.name)
+        stmt = (
+            select(PoliticalParty)
+            .where(PoliticalParty.is_active.is_(True))
+            .order_by(PoliticalParty.name)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

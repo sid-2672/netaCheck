@@ -14,8 +14,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from netacheck.ingestion.adr.parser import AdrParser
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "adr_html"
@@ -123,7 +121,11 @@ class TestParserAssets:
         html = _load("candidate_winner_with_cases.html")
         raw = AdrParser().parse(html, candidate_id=7896, source_url="https://myneta.info/test")
         # Praveen Khandelwal (BJP) should have declared assets
-        assert len(raw.movable_assets) > 0 or len(raw.immovable_assets) > 0 or raw.total_assets_inr != ""
+        assert (
+            len(raw.movable_assets) > 0
+            or len(raw.immovable_assets) > 0
+            or raw.total_assets_inr != ""
+        )
 
     def test_clean_page_has_asset_data(self) -> None:
         html = _load("candidate_winner_clean.html")

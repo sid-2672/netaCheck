@@ -14,18 +14,22 @@ Usage:
 
 from __future__ import annotations
 
-import uuid
-from typing import Any, Generic, TypeVar
+from datetime import UTC
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
 
 from netacheck.core.database import Base
+
+if TYPE_CHECKING:
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 ModelT = TypeVar("ModelT", bound=Base)
 
 
-class AsyncRepository(Generic[ModelT]):
+class AsyncRepository[ModelT: Base]:
     """
     Generic async repository providing standard data access operations.
 
@@ -102,8 +106,9 @@ class AsyncRepository(Generic[ModelT]):
 
         Model must have a `deleted_at` field (SoftDeleteMixin).
         """
-        from datetime import datetime, timezone
-        instance.deleted_at = datetime.now(tz=timezone.utc)  # type: ignore[attr-defined]
+        from datetime import datetime
+
+        instance.deleted_at = datetime.now(tz=UTC)  # type: ignore[attr-defined]
         self.session.add(instance)
         await self.session.flush()
         return instance

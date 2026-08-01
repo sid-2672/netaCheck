@@ -13,7 +13,7 @@ Always use the `get_db_session` dependency from `core/dependencies.py`.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -24,6 +24,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from netacheck.core.config import settings
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 
 class Base(DeclarativeBase):

@@ -6,6 +6,7 @@ import enum
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -14,8 +15,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from netacheck.core.database import Base
 from netacheck.models.base import TimestampMixin, UUIDPrimaryKeyMixin
 
+if TYPE_CHECKING:
+    from netacheck.models.affidavit import Affidavit
+    from netacheck.models.geography import Constituency
+    from netacheck.models.politician import PoliticalParty, Politician
 
-class ElectionType(str, enum.Enum):
+
+class ElectionType(enum.StrEnum):
     GENERAL = "GENERAL"
     ASSEMBLY = "ASSEMBLY"
     BY_ELECTION = "BY_ELECTION"
@@ -40,10 +46,8 @@ class Election(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     total_voters: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_votes_polled: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    constituency: Mapped["Constituency"] = relationship(  # type: ignore[name-defined]
-        "Constituency", back_populates="elections"
-    )
-    results: Mapped[list["ElectionResult"]] = relationship(
+    constituency: Mapped[Constituency] = relationship("Constituency", back_populates="elections")
+    results: Mapped[list[ElectionResult]] = relationship(
         "ElectionResult", back_populates="election"
     )
 
@@ -78,12 +82,10 @@ class ElectionResult(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     margin: Mapped[int | None] = mapped_column(Integer, nullable=True)
     eci_form26_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    election: Mapped["Election"] = relationship("Election", back_populates="results")
-    politician: Mapped["Politician"] = relationship(  # type: ignore[name-defined]
-        "Politician", back_populates="election_results"
-    )
-    party: Mapped["PoliticalParty"] = relationship("PoliticalParty")  # type: ignore[name-defined]
-    affidavits: Mapped[list["Affidavit"]] = relationship(  # type: ignore[name-defined]
+    election: Mapped[Election] = relationship("Election", back_populates="results")
+    politician: Mapped[Politician] = relationship("Politician", back_populates="election_results")
+    party: Mapped[PoliticalParty] = relationship("PoliticalParty")
+    affidavits: Mapped[list[Affidavit]] = relationship(
         "Affidavit", back_populates="election_result"
     )
 
