@@ -212,7 +212,7 @@ jobs:
       - name: Build frontend image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: 
           file: docker/frontend.Dockerfile
           push: false
           cache-from: type=gha
