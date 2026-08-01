@@ -22,11 +22,19 @@ from netacheck.main import create_app
 
 # ---------------------------------------------------------------------------
 # Test database — uses NullPool to prevent connection sharing across tests
+# Postgres is mapped to host port 5433 (see docker-compose.yml POSTGRES_PORT=5433)
+# Credentials match .env (POSTGRES_USER / POSTGRES_PASSWORD)
 # ---------------------------------------------------------------------------
 
 TEST_DATABASE_URL = (
-    "postgresql+asyncpg://netacheck_test:netacheck_test@localhost:5432/netacheck_test"
+    "postgresql+asyncpg://netacheck:netacheck_dev_password@localhost:5433/netacheck_test"
 )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers."""
+    config.addinivalue_line("markers", "integration: marks tests as integration tests (require DB)")
+    config.addinivalue_line("markers", "unit: marks tests as pure unit tests (no DB)")
 
 
 @pytest.fixture(scope="session")

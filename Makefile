@@ -146,8 +146,11 @@ push: ## Push Docker images to registry (requires REGISTRY env var)
 # ---------------------------------------------------------------------------
 # Ingestion (Phase 3+)
 # ---------------------------------------------------------------------------
-ingest-adr: ## Run ADR scraper for the pilot batch
-	cd $(BACKEND_DIR) && .venv/bin/python -m netacheck.scripts.ingest --source adr
+ingest-adr: ## Run ADR/MyNeta Lok Sabha 2024 scraper (all ~543 winners)
+	docker exec netacheck_backend python -m netacheck.ingestion.adr.run
 
-ingest-prs: ## Run PRS scraper
-	cd $(BACKEND_DIR) && .venv/bin/python -m netacheck.scripts.ingest --source prs
+ingest-adr-test: ## Ingest 5 candidates only — quick smoke test
+	docker exec netacheck_backend python -m netacheck.ingestion.adr.run --limit 5
+
+ingest-prs: ## Run PRS legislative activity scraper (Phase 4)
+	@echo "PRS scraper not yet implemented (Phase 4)."
