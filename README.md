@@ -10,14 +10,14 @@ NetaCheck is an open-source civic transparency platform for India. It aggregates
 
 ## Status
 
-🚧 **Active development** — Phase 1, Phase 2, and Phase 3 complete (211 passing tests).
+🚧 **Active development** — Phase 1, Phase 2, Phase 3, and Phase 4 complete (301 passing tests).
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1 | ✅ Complete | Project scaffolding, Docker, CI |
 | 2 | ✅ Complete | Database schema (23 models), Alembic migrations, Repositories |
 | 3 | ✅ Complete | ADR / MyNeta ingestion pipeline (Scraper, Parser, Normalizer, Writer) |
-| 4 | 🔜 Next | PRS Legislative Activity pipeline |
+| 4 | ✅ Complete | PRS Legislative Activity pipeline (Scraper, Parser, Normalizer, Writer) |
 | 5 | ⏳ Planned | Grading engine |
 | 6 | ⏳ Planned | REST API |
 | 7 | ⏳ Planned | Next.js frontend |
@@ -141,7 +141,7 @@ netacheck/
 | Source | Data Type | Status |
 |--------|-----------|--------|
 | ADR / MyNeta | Affidavits, criminal cases, assets | ✅ Complete (Phase 3) |
-| PRS India | Attendance, legislative activity | 🔜 Next (Phase 4) |
+| PRS India | Attendance, legislative activity | ✅ Complete (Phase 4) |
 | Lok Sabha | Question records, debates | Phase 6+ |
 | Rajya Sabha | Question records, debates | Phase 6+ |
 | Election Commission of India | Candidate data, results | Phase 6+ |
