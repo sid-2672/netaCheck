@@ -106,6 +106,9 @@ jobs:
 
       - name: Enable Postgres extensions
         run: |
+          until pg_isready -h localhost -p 5432 -U ${{ env.POSTGRES_USER }}; do
+            sleep 1
+          done
           PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql \
             -h localhost -U ${{ env.POSTGRES_USER }} -d ${{ env.POSTGRES_DB }} \
             -c "CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS unaccent;"
@@ -212,7 +215,7 @@ jobs:
       - name: Build frontend image
         uses: docker/build-push-action@v6
         with:
-          context: 
+          context: .
           file: docker/frontend.Dockerfile
           push: false
           cache-from: type=gha
